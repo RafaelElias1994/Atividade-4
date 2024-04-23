@@ -1,0 +1,547 @@
+import { faker } from '@faker-js/faker';
+
+describe('TESTES DA ROTA /USERS', function () {
+
+  beforeEach(function (){
+    cy.log('O hook executou');
+  });
+
+  afterEach(function() {
+    cy.request({
+      method: 'DELETE',
+      url: (baseUrl + '/api/users/{id}'),
+      body: {
+        id: id,
+      },
+      failOnStatusCode: false,
+    });
+  })
+
+  
+
+  var name;
+  var email;
+  var id;
+  const baseUrl = 'https://raromdb-3c39614e42d4.herokuapp.com';
+
+  it('O TESTE DÁ ERRO QUANDO NÃO SE INFORMA O E-MAIL PARA CADASTRO', function() {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/users'),
+      body: {
+        name: 'Rafael Elias',
+      },
+      failOnStatusCode: false,
+    })
+    .its('status')
+    .should('to.equal', 400);
+  });
+
+  it('O TESTE DÁ ERRO QUANDO NÃO SE INFORMA O NOME PARA CADASTRO', function() {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/users'),
+      body: {
+        email: 'RafaelElias@qa.com.br',
+      },
+      failOnStatusCode: false,
+    })
+    .its('status')
+    .should('to.equal', 400);
+  });
+
+  it('O TESTE DÁ ERRO QUANDO NÃO SE INFORMA O PASSWORD PARA CADASTRO', function() {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/users'),
+      body: {
+        name: 'Rafael Elias',
+        email: 'Rafael@qa.com.br'
+      },
+      failOnStatusCode: false,
+    })
+    .its('status')
+    .should('to.equal', 400);
+  });
+
+  it('O USUÁRIO É CADASTRADO COM SUCESSO!', function() {
+    cy.request('POST', (baseUrl + '/api/users'), {
+      name: faker.internet.userName(),
+      email: faker.internet.email(),
+      password: 'Rafa1234@'
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        id = resposta.body.id;
+
+        cy.log(resposta);
+        expect(resposta.status).to.equal(201);
+        expect(resposta.body.name).to.equal(name);
+        expect(resposta.body.email).to.equal(email);
+
+
+      });
+
+  it('O USUÁRIO É CADASTRADO COM SUCESSO!', function() {
+    cy.request('POST', (baseUrl + '/api/users'), {
+      name: faker.internet.userName(),
+      email: faker.internet.email(),
+      password: 'Rafa1234@'
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        id = resposta.body.id;
+
+        cy.log(resposta);
+        expect(resposta.status).to.equal(201);
+        expect(resposta.body.name).to.equal(name);
+        expect(resposta.body.email).to.equal(email);
+
+        
+        cy.request({
+          method: 'DELETE',
+          url: (baseUrl + '/api/users/{id}'),
+          body: {
+            id: id,
+          },
+          failOnStatusCode: false,
+        });
+      });
+
+    });
+  });
+});
+
+describe('TESTES DA ROTA /AUTH', function () {
+
+  
+
+  var senha = '1234567';
+  var token = "Bearer";
+  var name;
+  var email;
+  const baseUrl = 'https://raromdb-3c39614e42d4.herokuapp.com';
+
+  it('DEVE REALIZAR O LOGIN COM SUCESSO', function () {
+    cy.request('POST', (baseUrl + '/api/users'), {
+        name: faker.internet.userName(),
+        email: faker.internet.email(),
+        password: senha,
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        cy.log(resposta);
+        cy.request('POST', (baseUrl + '/api/auth/login') ,{
+          email: email,
+          password: senha,
+        }).then(function(resposta) {
+          token = token + resposta.body.accessToken          
+        })
+      })
+  });
+
+  it('ERRO AO LOGAR COM EMAIL INEXISTENTE', function () {
+    cy.request('POST', (baseUrl + '/api/users'), {
+        name: faker.internet.userName(),
+        email: faker.internet.email(),
+        password: senha,
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        cy.log(resposta);
+        cy.request({
+          method: 'POST',
+          url: (baseUrl + '/api/auth/login'),
+          body: {
+            email: faker.internet.userName(),
+            password: senha,
+          },
+          failOnStatusCode: false,
+        }).then(function(retorno) {
+          cy.log(retorno);
+          expect(retorno.status).to.equal(400);
+        })   
+      })
+    })
+
+  it('ERRO AO LOGAR COM SENHA INEXISTENTE', function () {
+    cy.request('POST', (baseUrl + '/api/users'), {
+        name: faker.internet.userName(),
+        email: faker.internet.email(),
+        password: senha,
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        cy.log(resposta);
+        cy.request({
+          method: 'POST',
+          url: (baseUrl + '/api/auth/login'),
+          body: {
+            email: email,
+            password: faker.internet.password(),
+          },
+          failOnStatusCode: false,
+        }).then(function(retorno) {
+          cy.log(retorno);
+          expect(retorno.status).to.equal(401);
+        })   
+      })
+    })
+
+
+  it('ERRO AO LOGAR COM MESMO E-MAIL JÁ CADASTRADO', function () {
+
+    var senha = '1234567';
+    cy.request('POST', (baseUrl + '/api/users'), {
+        name: faker.internet.userName(),
+        email: faker.internet.email(),
+        password: senha,
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        cy.log(resposta);
+        cy.request({
+          method: 'POST',
+          url: (baseUrl + '/api/auth/login'),
+          body: {
+            email: resposta.body.name,
+            password: senha,
+          },
+          failOnStatusCode: false,
+        }).then(function(retorno) {
+          cy.log(retorno);
+          expect(retorno.status).to.equal(400);
+        })   
+      })
+    })
+
+
+
+
+  
+});
+
+
+describe('TESTES DA ROTA /FILMES', function () {
+
+  const baseUrl = 'https://raromdb-3c39614e42d4.herokuapp.com';
+
+
+  it('DEVE REALIZAR A ENTRADA DE USER NO FILME COM SUCESSO', function () {
+    var name;
+    var email;
+    var senha = '1234567';
+    var token = "Bearer";
+
+    cy.request('POST', (baseUrl + '/api/users'), {
+        name: faker.internet.userName(),
+        email: faker.internet.email(),
+        password: senha,
+      }).then(function(resposta) {
+        name = resposta.body.name;
+        email = resposta.body.email;
+        cy.log(resposta);
+        cy.request('POST', (baseUrl + '/api/auth/login') ,{
+          email: email,
+          password: senha,
+        }).then(function(resposta) {
+          token = token + resposta.body.accessToken          
+        })
+            
+        cy.request({
+          method: 'PATCH',
+          url: baseUrl + '/api/users/admin',
+          headers: {
+            Authorization: token + resposta.body.accessToken
+          },
+          failOnStatusCode: false
+        });
+      });
+
+  });
+
+  it('FALHA AO CRIAR FILME POR FALTA DE TITULO', function () {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/movies'),
+      body: {
+        genre: "string",
+        description: "string",
+        durationInMinutes: 0,
+        releaseYear: 0
+      },
+      failOnStatusCode: false,
+      }).then(function(filme) {
+        expect(filme.status).to.equal(401);
+        cy.log(filme);
+      });
+  });
+
+  it('FALHA AO CRIAR FILME POR FALTA DE GENERO', function () {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/movies'),
+      body: {
+        title: "string",
+        description: "string",
+        durationInMinutes: 0,
+        releaseYear: 0
+      },
+      failOnStatusCode: false,
+      }).then(function(filme) {
+        expect(filme.status).to.equal(401);
+        cy.log(filme);
+      });
+  });
+
+  it('FALHA AO CRIAR FILME POR FALTA DE DESCRIÇÃO', function () {
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/movies'),
+      body: {
+        title: "string",
+        genre: "string",        
+        durationInMinutes: 0,
+        releaseYear: 0
+      },
+      failOnStatusCode: false,
+      }).then(function(filme) {
+        expect(filme.status).to.equal(401);
+        cy.log(filme);
+      });
+  });
+
+  it('CRIAÇÃO DE FILME COM SUCESSO', function () {
+    var name;
+    var email;
+    var senha = '1234567';
+    var token = "bearer";
+    
+    cy.request('POST', (baseUrl + '/api/users'), {      
+      name: faker.internet.userName(),
+      email: faker.internet.email(),
+      password: senha,
+    }).then(function(resposta) {
+      name = resposta.body.name;
+      email = resposta.body.email;      
+      cy.log(resposta);
+    cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/auth/login'),
+      body: {
+        email: email,
+        password: senha,
+      },
+      failOnStatusCode: false
+      }).then(function(resposta) {
+        token = token + resposta.body.accessToken          
+      })
+    })
+      cy.request({
+      method: 'POST',
+      url: (baseUrl + '/api/movies'),
+      body: {
+        title: "Exterminador do futuro 1",
+        genre: "Ação",
+        description: "Máquina do futuro com missão",        
+        durationInMinutes: 120,
+        releaseYear: 2003
+      },
+      failOnStatusCode: false,
+      }).then(function(filme) {
+        expect(filme.status).to.equal(401);
+        cy.log(filme);
+      });
+  });
+});
+
+describe('TESTES NO MOVIES', function () {
+
+  var token;
+  var name;
+  var email;  
+  let password = '1234567';
+  var usuarioCriado;
+  var idUser;
+  var idMovie;
+  
+
+  beforeEach(function () {
+    cy.criarUser().then(function (dados) {
+      usuarioCriado = dados;
+      idUser = usuarioCriado.id;
+      cy.log(usuarioCriado.id);
+      cy.request('POST', '/auth/login', {
+        email: usuarioCriado.email,
+        password: password,
+      }).then(function (dados) {    
+        token = dados.body.accessToken
+        cy.log(token);
+      cy.request({
+        method: 'PATCH',
+        url: '/users/admin',
+        headers: {
+          Authorization: "Bearer " + token,
+        }
+        });
+      })
+    });
+
+  // after(function () {
+  //   cy.request({
+  //     method:'DELETE',
+  //     url: '/api/users/' + idUser,
+  //     headers: {
+  //       Authorization: "Bearer " + token,
+  //     }
+  //   });
+  // });
+    
+  // afterEach(function () {
+  //   cy.deletarUser(idUser);
+  // });
+    // .then(function(response) {
+    //   cy.log(response);
+    //   cy.request('POST', (baseUrl + '/api/auth/login'), {
+    //     email: response.body.email,
+    //     password: password,
+    //   }).then(function (dados) {    
+    //     token = token + dados.body.accessToken
+    //   })
+    // });
+  });
+    
+
+
+    
+
+  it('BAD REQUEST NA CRIAÇÃO DE FILMES SEM O CAMPO TITLE', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        
+        genre: "Ação",
+        description: "Super heróis em formação.",
+        durationInMinutes: 120,
+        releaseYear: 2010,          
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).its('status').should('to.equal', 400)
+  });
+
+  it('BAD REQUEST NA CRIAÇÃO DE FILMES SEM O CAMPO GENRE', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        title: "X-MEN",
+        
+        description: "Super heróis em formação.",
+        durationInMinutes: 120,
+        releaseYear: 2010,          
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).its('status').should('to.equal', 400)
+  });
+
+  it('BAD REQUEST NA CRIAÇÃO DE FILMES SEM O CAMPO DESCRIPTION', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        title: "X-MEN",
+        genre: "Ação",
+        
+        durationInMinutes: 120,
+        releaseYear: 2010,          
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).its('status').should('to.equal', 400)
+  });
+
+  it('BAD REQUEST NA CRIAÇÃO DE FILMES SEM O CAMPO DURATIONINMINUTES', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        title: "X-MEN",
+        genre: "Ação",
+        description: "Super heróis em formação.",
+        
+        releaseYear: 2010,          
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).its('status').should('to.equal', 400)
+  });
+
+  it('BAD REQUEST NA CRIAÇÃO DE FILMES SEM O CAMPO RELEASEYEAR', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        title: "X-MEN",
+        genre: "Ação",
+        description: "Super heróis em formação.",
+        durationInMinutes: 120,
+                  
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).its('status').should('to.equal', 400)
+  });
+
+  it('CRIAÇÃO DE FILME COM SUCESSO', function () {
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {        
+        title: "X-MEN",
+        genre: "Ação",
+        description: "Super heróis em formação.",
+        durationInMinutes: 120,
+        releaseYear: 2010,          
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+      }).then(function(response) {
+        cy.log(response.body);
+        idMovie = response.body.id;
+        expect(response.status).to.equal(201);
+        expect(response.body).to.have.property('title');
+        expect(response.body).to.have.property('releaseYear');
+
+        // cy.deletarUser(response.body.id);
+      })
+  });
+
+  it('CRIAÇÃO DE REVIEW NO DIRETÓRIO /USERS', function () {
+    cy.request({
+      method: 'POST',
+      url: '/users/review',
+      body: {
+        movieId: idMovie,
+        score: 9,
+        reviewText: "Ótimo"
+      },
+      headers: {Authorization: "Bearer " + token},
+      failOnStatusCode: false,
+    });
+  });
+  
+  
+});
+
+
+
+
+
+
+
+
+
+
